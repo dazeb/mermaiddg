@@ -96,12 +96,14 @@ export function useSupabase(workspaceId: string) {
       // Check for existing Supabase session
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
+        // Get or generate a stable color for this user
+        const userColor = getUserColor(session.user.id);
         const registeredUser: User = {
           id: session.user.id,
           name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
           email: session.user.email,
           isGuest: false,
-          color: generateUserColor(),
+          color: userColor,
           lastSeen: new Date().toISOString(),
         };
         setCurrentUser(registeredUser);
@@ -113,6 +115,8 @@ export function useSupabase(workspaceId: string) {
     // Create or load guest user
     const userId = localStorage.getItem('userId') || generateUserId();
     const userName = localStorage.getItem('userName') || `Guest ${userId.slice(0, 8)}`;
+    // Get or generate a stable color for this user
+    const userColor = getUserColor(userId);
     localStorage.setItem('userId', userId);
     localStorage.setItem('userName', userName);
     
@@ -120,7 +124,7 @@ export function useSupabase(workspaceId: string) {
       id: userId,
       name: userName,
       isGuest: true,
-      color: generateUserColor(),
+      color: userColor,
       lastSeen: new Date().toISOString(),
     };
     
@@ -185,7 +189,7 @@ export function useSupabase(workspaceId: string) {
           name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
           email: data.user.email,
           isGuest: false,
-          color: generateUserColor(),
+          color: getUserColor(data.user.id),
           lastSeen: new Date().toISOString(),
         };
         
@@ -360,10 +364,29 @@ function generateUserId(): string {
   return Math.random().toString(36).substr(2, 9);
 }
 
-function generateUserColor(): string {
+function getUserColor(userId: string): string {
+  // Check if we already have a color stored for this user
+  const storedColor = localStorage.getItem(`userColor_${userId}`);
+  if (storedColor) {
+    return storedColor;
+  }
+  
+  // Generate a consistent color based on user ID
   const colors = [
     '#3B82F6', '#EF4444', '#10B981', '#F59E0B',
     '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'
   ];
-  return colors[Math.floor(Math.random() * colors.length)];
+  
+  // Use a simple hash of the user ID to pick a consistent color
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) {
+    hash = ((hash << 5) - hash + userId.charCodeAt(i)) & 0xffffffff;
+  }
+  const colorIndex = Math.abs(hash) % colors.length;
+  const selectedColor = colors[colorIndex];
+  
+  // Store the color for future use
+  localStorage.setItem(`userColor_${userId}`, selectedColor);
+  
+  return selectedColor;
 }
