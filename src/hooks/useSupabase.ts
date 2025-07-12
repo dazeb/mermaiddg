@@ -264,13 +264,14 @@ export function useSupabase(workspaceId: string) {
           .insert([{ ...newNode, workspace_id: workspaceId }]);
         
         if (error) {
-          console.error('Error adding node:', error);
           // If we get a table not found error, switch to offline mode
           if (error.message?.includes('relation "public.diagram_nodes" does not exist') || 
               error.code === 'PGRST116') {
             console.log('Switching to offline mode due to missing table');
             setIsOfflineMode(true);
             setNodes(prev => [...prev, newNode]);
+          } else {
+            console.error('Error adding node:', error);
           }
         }
       } catch (error) {
@@ -296,7 +297,6 @@ export function useSupabase(workspaceId: string) {
           .eq('id', id);
         
         if (error) {
-          console.error('Error updating node:', error);
           // If table doesn't exist, switch to offline mode
           if (error.message?.includes('relation "public.diagram_nodes" does not exist') || 
               error.code === 'PGRST116') {
@@ -304,6 +304,8 @@ export function useSupabase(workspaceId: string) {
             setNodes(prev => prev.map(node => 
               node.id === id ? { ...node, ...updates } : node
             ));
+          } else {
+            console.error('Error updating node:', error);
           }
         }
       } catch (error) {
@@ -328,12 +330,13 @@ export function useSupabase(workspaceId: string) {
           .eq('id', id);
         
         if (error) {
-          console.error('Error deleting node:', error);
           // If table doesn't exist, switch to offline mode
           if (error.message?.includes('relation "public.diagram_nodes" does not exist') || 
               error.code === 'PGRST116') {
             setIsOfflineMode(true);
             setNodes(prev => prev.filter(node => node.id !== id));
+          } else {
+            console.error('Error deleting node:', error);
           }
         }
       } catch (error) {
