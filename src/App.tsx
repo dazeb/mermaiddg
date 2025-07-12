@@ -4,6 +4,8 @@ import { v4 as uuidv4 } from "uuid";
 import { Canvas } from "./components/Canvas";
 import { Sidebar } from "./components/Sidebar";
 import { Toolbar } from "./components/Toolbar";
+import { UserProfile } from "./components/UserProfile";
+import { useSupabase } from "./hooks/useSupabase";
 import type { DiagramNode } from "./types";
 
 // Lazy load components that are only used in modals
@@ -22,6 +24,16 @@ const DiagramEditDialog = lazy(() =>
     default: module.DiagramEditDialog,
   }))
 );
+const AuthModal = lazy(() =>
+  import("./components/AuthModal").then((module) => ({
+    default: module.AuthModal,
+  }))
+);
+const Settings = lazy(() =>
+  import("./components/Settings").then((module) => ({
+    default: module.Settings,
+  }))
+);
 
 function App() {
   const [activeTool, setActiveTool] = useState("select");
@@ -29,43 +41,107 @@ function App() {
   const [isCodeEditorOpen, setIsCodeEditorOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [editingDiagram, setEditingDiagram] = useState<DiagramNode | null>(
     null
   );
-  const [nodes, setNodes] = useState<DiagramNode[]>([]);
-  const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load nodes from localStorage on mount
-  useEffect(() => {
-    const savedNodes = localStorage.getItem("mermaid-diagrams");
-    if (savedNodes) {
+  // Use Supabase hook for multi-user functionality
+  const workspaceId = "default-workspace"; // For now, use a single workspace
+  const {
+    nodes,
+    users,
+    currentUser,
+    authState,
+    addNode,
+    updateNode,
+    deleteNode,
+    signUp,
+    signIn,
+    signOut,
+    updateUserName,
+    isOfflineMode,
+  } = useSupabase(workspaceId);
+
+  // Authentication handlers
+  const handleUpgradeAccount = () => {
+    setIsAuthModalOpen(true);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+  const handleUpdateUser = (updates: { name?: string; email?: string }) => {
+    if (updates.name && updates.name !== currentUser?.name) {
+      updateUserName(updates.name);
+    }
+  };
+
+  // Settings handlers
+  const handleOpenSettings = () => {
+    setIsSettingsOpen(true);
+  };
+
+  const handleExportData = () => {
+    const dataToExport = {
+      nodes,
+      user: currentUser,
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(dataToExport, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `mermaid-diagrams-${
+      new Date().toISOString().split("T")[0]
+    }.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportData = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
       try {
-        const parsedNodes = JSON.parse(savedNodes);
-        setNodes(parsedNodes);
+        const data = JSON.parse(e.target?.result as string);
+        if (data.nodes && Array.isArray(data.nodes)) {
+          // Import nodes one by one
+          data.nodes.forEach((node: DiagramNode) => {
+            addNode({
+              ...node,
+              id: uuidv4(), // Generate new IDs to avoid conflicts
+              userId: currentUser?.id || "local-user",
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            });
+          });
+        }
       } catch (error) {
-        console.error("Failed to load saved diagrams:", error);
+        console.error("Failed to import data:", error);
       }
-    }
-    setIsLoaded(true);
-  }, []);
+    };
+    reader.readAsText(file);
+  };
 
-  // Save nodes to localStorage whenever they change (but not on initial load)
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem("mermaid-diagrams", JSON.stringify(nodes));
-    }
-  }, [nodes, isLoaded]);
+  const handleClearData = () => {
+    // Delete all nodes
+    nodes.forEach((node) => {
+      deleteNode(node.id);
+    });
+  };
 
   const handleToolChange = (toolId: string) => {
     setActiveTool(toolId);
   };
 
   const handleNodeAdd = (nodeData: Omit<DiagramNode, "id">) => {
-    const newNode: DiagramNode = {
-      ...nodeData,
-      id: uuidv4(),
-    };
-    setNodes((prev) => [...prev, newNode]);
+    addNode(nodeData);
   };
 
   const handleCreateFromCode = (code: string, title: string) => {
@@ -78,24 +154,18 @@ function App() {
       title,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      userId: "local-user",
+      userId: currentUser?.id || "local-user",
     };
 
     handleNodeAdd(nodeData);
   };
 
   const handleNodeUpdate = (id: string, updates: Partial<DiagramNode>) => {
-    setNodes((prev) =>
-      prev.map((node) =>
-        node.id === id
-          ? { ...node, ...updates, updatedAt: new Date().toISOString() }
-          : node
-      )
-    );
+    updateNode(id, { ...updates, updatedAt: new Date().toISOString() });
   };
 
   const handleNodeDelete = (id: string) => {
-    setNodes((prev) => prev.filter((node) => node.id !== id));
+    deleteNode(id);
     if (selectedNodeId === id) {
       setSelectedNodeId(null);
     }
@@ -170,7 +240,7 @@ function App() {
     onNodeEdit: handleDiagramEdit,
     onOpenCodeEditor: () => setIsCodeEditorOpen(true),
     activeTool,
-    currentUserId: "local-user",
+    currentUserId: currentUser?.id || "local-user",
   });
 
   return (
@@ -186,9 +256,22 @@ function App() {
         onZoomOut={canvasData.zoomOut}
         onExport={handleExport}
         onOpenCodeEditor={() => setIsCodeEditorOpen(true)}
-        userCount={1}
+        userCount={users.length}
         zoom={canvasData.zoom}
       />
+
+      {/* User Profile */}
+      {currentUser && (
+        <div className="absolute top-4 right-4 z-30">
+          <UserProfile
+            user={currentUser}
+            onSignOut={handleSignOut}
+            onUpgradeAccount={handleUpgradeAccount}
+            onUpdateName={updateUserName}
+            onOpenSettings={handleOpenSettings}
+          />
+        </div>
+      )}
 
       {/* Sidebar */}
       <Sidebar
@@ -231,6 +314,39 @@ function App() {
             onClose={handleEditDialogClose}
             diagram={editingDiagram}
             onSave={handleDiagramSave}
+          />
+        </Suspense>
+      )}
+
+      {/* Authentication Modal */}
+      {isAuthModalOpen && currentUser && (
+        <Suspense fallback={<div>Loading...</div>}>
+          <AuthModal
+            isOpen={isAuthModalOpen}
+            onClose={() => setIsAuthModalOpen(false)}
+            onSignUp={signUp}
+            onSignIn={signIn}
+            isLoading={authState.isLoading}
+            error={authState.error}
+            guestName={currentUser.name}
+          />
+        </Suspense>
+      )}
+
+      {/* Settings Modal */}
+      {isSettingsOpen && currentUser && (
+        <Suspense fallback={<div>Loading...</div>}>
+          <Settings
+            isOpen={isSettingsOpen}
+            onClose={() => setIsSettingsOpen(false)}
+            user={currentUser}
+            onUpdateUser={handleUpdateUser}
+            onSignOut={handleSignOut}
+            onUpgradeAccount={handleUpgradeAccount}
+            onExportData={handleExportData}
+            onImportData={handleImportData}
+            onClearData={handleClearData}
+            isOfflineMode={isOfflineMode}
           />
         </Suspense>
       )}
