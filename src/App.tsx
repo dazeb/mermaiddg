@@ -1,12 +1,27 @@
-import React, { useState, useEffect } from "react";
-import { Canvas } from "./components/Canvas";
-import { Toolbar } from "./components/Toolbar";
-import { Sidebar } from "./components/Sidebar";
-import { CodeEditor } from "./components/CodeEditor";
-import { ExportModal } from "./components/ExportModal";
-import { DiagramEditDialog } from "./components/DiagramEditDialog";
-import { DiagramNode } from "./types";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
+
+import { Canvas } from "./components/Canvas";
+import { Sidebar } from "./components/Sidebar";
+import { Toolbar } from "./components/Toolbar";
+import type { DiagramNode } from "./types";
+
+// Lazy load components that are only used in modals
+const CodeEditor = lazy(() =>
+  import("./components/CodeEditor").then((module) => ({
+    default: module.CodeEditor,
+  }))
+);
+const ExportModal = lazy(() =>
+  import("./components/ExportModal").then((module) => ({
+    default: module.ExportModal,
+  }))
+);
+const DiagramEditDialog = lazy(() =>
+  import("./components/DiagramEditDialog").then((module) => ({
+    default: module.DiagramEditDialog,
+  }))
+);
 
 function App() {
   const [activeTool, setActiveTool] = useState("select");
@@ -186,26 +201,38 @@ function App() {
       />
 
       {/* Code Editor */}
-      <CodeEditor
-        isOpen={isCodeEditorOpen}
-        onClose={() => setIsCodeEditorOpen(false)}
-        onCreateDiagram={handleCreateFromCode}
-      />
+      {isCodeEditorOpen && (
+        <Suspense fallback={<div>Loading...</div>}>
+          <CodeEditor
+            isOpen={isCodeEditorOpen}
+            onClose={() => setIsCodeEditorOpen(false)}
+            onCreateDiagram={handleCreateFromCode}
+          />
+        </Suspense>
+      )}
 
       {/* Export Modal */}
-      <ExportModal
-        isOpen={isExportModalOpen}
-        onClose={() => setIsExportModalOpen(false)}
-        diagrams={nodes}
-      />
+      {isExportModalOpen && (
+        <Suspense fallback={<div>Loading...</div>}>
+          <ExportModal
+            isOpen={isExportModalOpen}
+            onClose={() => setIsExportModalOpen(false)}
+            diagrams={nodes}
+          />
+        </Suspense>
+      )}
 
       {/* Diagram Edit Dialog */}
-      <DiagramEditDialog
-        isOpen={isEditDialogOpen}
-        onClose={handleEditDialogClose}
-        diagram={editingDiagram}
-        onSave={handleDiagramSave}
-      />
+      {isEditDialogOpen && (
+        <Suspense fallback={<div>Loading...</div>}>
+          <DiagramEditDialog
+            isOpen={isEditDialogOpen}
+            onClose={handleEditDialogClose}
+            diagram={editingDiagram}
+            onSave={handleDiagramSave}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }
