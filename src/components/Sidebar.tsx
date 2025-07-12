@@ -1,31 +1,46 @@
-import React, { useState } from 'react';
-import { 
-  PanelLeftClose, 
-  PanelLeftOpen, 
-  FileText, 
-  Users, 
-  History,
+import React, { useState } from "react";
+import {
+  PanelLeftClose,
+  PanelLeftOpen,
+  FileText,
   Download,
-  Upload,
   Settings,
   Trash2,
-  AlertTriangle
-} from 'lucide-react';
-import { DiagramNode, User } from '../types';
+  AlertTriangle,
+  Code,
+  Play,
+} from "lucide-react";
+import { DiagramNode } from "../types";
 
 interface SidebarProps {
   nodes: DiagramNode[];
-  users: User[];
   onNodeSelect: (nodeId: string) => void;
   onNodeDelete: (nodeId: string) => void;
   selectedNodeId: string | null;
   onExport: () => void;
+  onCreateDiagram: (code: string, title: string) => void;
 }
 
-export function Sidebar({ nodes, users, onNodeSelect, onNodeDelete, selectedNodeId, onExport }: SidebarProps) {
+export function Sidebar({
+  nodes,
+  onNodeSelect,
+  onNodeDelete,
+  selectedNodeId,
+  onExport,
+  onCreateDiagram,
+}: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState<'diagrams' | 'users' | 'history'>('diagrams');
+  const [activeTab, setActiveTab] = useState<"diagrams" | "code">("diagrams");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  // Code editor state
+  const [codeTitle, setCodeTitle] = useState("New Diagram");
+  const [codeContent, setCodeContent] = useState(`graph LR
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Action 1]
+    B -->|No| D[Action 2]
+    C --> E[End]
+    D --> E`);
 
   if (isCollapsed) {
     return (
@@ -56,18 +71,18 @@ export function Sidebar({ nodes, users, onNodeSelect, onNodeDelete, selectedNode
       {/* Tabs */}
       <div className="flex border-b border-gray-200">
         {[
-          { id: 'diagrams' as const, icon: FileText, label: 'Diagrams' },
-          { id: 'users' as const, icon: Users, label: 'Users' },
-          { id: 'history' as const, icon: History, label: 'History' },
+          { id: "diagrams" as const, icon: FileText, label: "Diagrams" },
+          { id: "code" as const, icon: Code, label: "Code" },
         ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`
               flex-1 flex items-center justify-center space-x-2 py-3 text-sm font-medium transition-all duration-200
-              ${activeTab === tab.id 
-                ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50' 
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              ${
+                activeTab === tab.id
+                  ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
+                  : "text-gray-500 hover:text-gray-700 hover:bg-gray-50"
               }
             `}
           >
@@ -79,13 +94,15 @@ export function Sidebar({ nodes, users, onNodeSelect, onNodeDelete, selectedNode
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        {activeTab === 'diagrams' && (
+        {activeTab === "diagrams" && (
           <div className="p-4 space-y-3">
             {nodes.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <FileText size={48} className="mx-auto mb-3 opacity-50" />
                 <p className="text-sm">No diagrams yet</p>
-                <p className="text-xs text-gray-400 mt-1">Click the + tool to add one</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Click the + tool to add one
+                </p>
               </div>
             ) : (
               nodes.map((node) => (
@@ -93,18 +110,25 @@ export function Sidebar({ nodes, users, onNodeSelect, onNodeDelete, selectedNode
                   key={node.id}
                   className={`
                     p-3 rounded-lg border-2 transition-all duration-200 group
-                    ${selectedNodeId === node.id 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    ${
+                      selectedNodeId === node.id
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
                     }
-                    ${deleteConfirmId === node.id ? 'ring-2 ring-red-500 ring-opacity-50' : ''}
+                    ${
+                      deleteConfirmId === node.id
+                        ? "ring-2 ring-red-500 ring-opacity-50"
+                        : ""
+                    }
                   `}
                 >
                   {deleteConfirmId === node.id ? (
                     <div className="space-y-3">
                       <div className="flex items-center space-x-2 text-red-600">
                         <AlertTriangle size={16} />
-                        <span className="text-sm font-medium">Delete "{node.title}"?</span>
+                        <span className="text-sm font-medium">
+                          Delete "{node.title}"?
+                        </span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <button
@@ -126,19 +150,22 @@ export function Sidebar({ nodes, users, onNodeSelect, onNodeDelete, selectedNode
                     </div>
                   ) : (
                     <>
-                      <div 
+                      <div
                         onClick={() => onNodeSelect(node.id)}
                         className="cursor-pointer"
                       >
-                        <h4 className="font-medium text-gray-900 text-sm truncate">{node.title}</h4>
+                        <h4 className="font-medium text-gray-900 text-sm truncate">
+                          {node.title}
+                        </h4>
                         <p className="text-xs text-gray-500 mt-1">
-                          Updated {new Date(node.updatedAt).toLocaleDateString()}
+                          Updated{" "}
+                          {new Date(node.updatedAt).toLocaleDateString()}
                         </p>
                         <p className="text-xs text-gray-400 mt-1 truncate">
-                          {node.code.split('\n')[0]}
+                          {node.code.split("\n")[0]}
                         </p>
                       </div>
-                      
+
                       <div className="flex items-center justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={(e) => {
@@ -159,34 +186,69 @@ export function Sidebar({ nodes, users, onNodeSelect, onNodeDelete, selectedNode
           </div>
         )}
 
-        {activeTab === 'users' && (
-          <div className="p-4 space-y-3">
-            <div className="text-sm text-gray-600 mb-4">
-              {users.length} user{users.length !== 1 ? 's' : ''} online
+        {activeTab === "code" && (
+          <div className="p-4 space-y-4">
+            {/* Title Input */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-2">
+                Diagram Title
+              </label>
+              <input
+                type="text"
+                value={codeTitle}
+                onChange={(e) => setCodeTitle(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter diagram title..."
+              />
             </div>
-            {users.map((user) => (
-              <div key={user.id} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50">
-                <div 
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: user.color }}
-                />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                  <p className="text-xs text-gray-500">
-                    Active {new Date(user.lastSeen).toLocaleTimeString()}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
 
-        {activeTab === 'history' && (
-          <div className="p-4">
-            <div className="text-center py-8 text-gray-500">
-              <History size={48} className="mx-auto mb-3 opacity-50" />
-              <p className="text-sm">Version history</p>
-              <p className="text-xs text-gray-400 mt-1">Coming soon</p>
+            {/* Code Editor */}
+            <div className="flex-1">
+              <label className="block text-xs font-medium text-gray-700 mb-2">
+                Mermaid Code
+              </label>
+              <textarea
+                value={codeContent}
+                onChange={(e) => setCodeContent(e.target.value)}
+                className="w-full h-64 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-white text-gray-900"
+                placeholder="Enter your Mermaid code here..."
+                spellCheck={false}
+              />
+            </div>
+
+            {/* Create Button */}
+            <button
+              onClick={() => {
+                if (codeContent.trim() && codeTitle.trim()) {
+                  onCreateDiagram(codeContent, codeTitle);
+                  // Reset form
+                  setCodeTitle("New Diagram");
+                  setCodeContent(`graph LR
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Action 1]
+    B -->|No| D[Action 2]
+    C --> E[End]
+    D --> E`);
+                }
+              }}
+              disabled={!codeContent.trim() || !codeTitle.trim()}
+              className="w-full flex items-center justify-center space-x-2 py-2 px-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+            >
+              <Play size={16} />
+              <span>Create Diagram</span>
+            </button>
+
+            {/* Help Text */}
+            <div className="text-xs text-gray-500">
+              Need help? Check out the{" "}
+              <a
+                href="https://mermaid.js.org/syntax/flowchart.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-700 underline"
+              >
+                Mermaid documentation
+              </a>
             </div>
           </div>
         )}
@@ -201,7 +263,7 @@ export function Sidebar({ nodes, users, onNodeSelect, onNodeDelete, selectedNode
           <Download size={16} />
           <span>Export Workspace</span>
         </button>
-        
+
         <button className="w-full flex items-center justify-center space-x-2 py-2 px-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium">
           <Settings size={16} />
           <span>Settings</span>

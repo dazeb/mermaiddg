@@ -1,7 +1,7 @@
-import React, { useState, useRef } from 'react';
-import { DiagramRenderer } from './DiagramRenderer';
-import { DiagramNode as DiagramNodeType } from '../types';
-import { Move, Edit3, Trash2, Copy, AlertTriangle } from 'lucide-react';
+import React, { useState, useRef } from "react";
+import { DiagramRenderer } from "./DiagramRenderer";
+import { DiagramNode as DiagramNodeType } from "../types";
+import { Move, Edit3, Trash2, Copy, AlertTriangle } from "lucide-react";
 
 interface DiagramNodeProps {
   node: DiagramNodeType;
@@ -13,28 +13,37 @@ interface DiagramNodeProps {
   zoom: number;
 }
 
-export function DiagramNode({ 
-  node, 
-  isSelected, 
-  onSelect, 
-  onUpdate, 
-  onDelete, 
+export function DiagramNode({
+  node,
+  isSelected,
+  onSelect,
+  onUpdate,
+  onDelete,
   onDuplicate,
-  zoom 
+  zoom,
 }: DiagramNodeProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editCode, setEditCode] = useState(node.code);
   const [editTitle, setEditTitle] = useState(node.title);
-  const dragRef = useRef<{ startX: number; startY: number; nodeX: number; nodeY: number } | null>(null);
+  const dragRef = useRef<{
+    startX: number;
+    startY: number;
+    nodeX: number;
+    nodeY: number;
+  } | null>(null);
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.target !== e.currentTarget && !e.currentTarget.contains(e.target as Node)) return;
-    
+    if (
+      e.target !== e.currentTarget &&
+      !e.currentTarget.contains(e.target as Node)
+    )
+      return;
+
     onSelect();
     setIsDragging(true);
-    
+
     dragRef.current = {
       startX: e.clientX,
       startY: e.clientY,
@@ -44,10 +53,10 @@ export function DiagramNode({
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!dragRef.current) return;
-      
+
       const deltaX = (e.clientX - dragRef.current.startX) / zoom;
       const deltaY = (e.clientY - dragRef.current.startY) / zoom;
-      
+
       onUpdate({
         x: dragRef.current.nodeX + deltaX,
         y: dragRef.current.nodeY + deltaY,
@@ -57,12 +66,12 @@ export function DiagramNode({
     const handleMouseUp = () => {
       setIsDragging(false);
       dragRef.current = null;
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
   };
 
   const handleSaveEdit = () => {
@@ -97,27 +106,29 @@ export function DiagramNode({
     <>
       <div
         className={`
-          absolute bg-white border-2 rounded-xl shadow-lg transition-all duration-200 cursor-pointer
-          ${isSelected ? 'border-blue-500 shadow-xl' : 'border-gray-200 hover:border-gray-300'}
-          ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}
-          ${showDeleteConfirm ? 'ring-2 ring-red-500 ring-opacity-50' : ''}
+          absolute transition-all duration-200 cursor-pointer
+          ${isDragging ? "cursor-grabbing" : "cursor-grab"}
+          ${isSelected ? "ring-2 ring-blue-500 ring-opacity-50" : ""}
+          ${showDeleteConfirm ? "ring-2 ring-red-500 ring-opacity-50" : ""}
         `}
         style={{
           left: node.x,
           top: node.y,
-          width: node.width,
+          minWidth: node.width,
           minHeight: node.height,
+          maxWidth: "900px", // Allow expansion up to 900px
+          width: "auto", // Allow natural width expansion
           transform: `scale(${zoom})`,
-          transformOrigin: 'top left',
+          transformOrigin: "top left",
         }}
         onMouseDown={handleMouseDown}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-3 border-b border-gray-100">
+        <div className="flex items-center justify-between p-3 bg-white/80 backdrop-blur-sm rounded-t-lg">
           <h3 className="font-medium text-gray-900 text-sm truncate flex-1">
             {node.title}
           </h3>
-          
+
           {isSelected && !showDeleteConfirm && (
             <div className="flex items-center space-x-1 ml-2">
               <button
@@ -130,7 +141,7 @@ export function DiagramNode({
               >
                 <Edit3 size={14} />
               </button>
-              
+
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -141,7 +152,7 @@ export function DiagramNode({
               >
                 <Copy size={14} />
               </button>
-              
+
               <button
                 onClick={handleDeleteClick}
                 className="p-1.5 rounded text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors"
@@ -176,7 +187,7 @@ export function DiagramNode({
         </div>
 
         {/* Content */}
-        <div className="p-4">
+        <div className={`${isEditing ? "p-4" : "p-2"}`}>
           {isEditing ? (
             <div className="space-y-3">
               <input
@@ -186,14 +197,14 @@ export function DiagramNode({
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Diagram title"
               />
-              
+
               <textarea
                 value={editCode}
                 onChange={(e) => setEditCode(e.target.value)}
                 className="w-full h-32 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                 placeholder="Enter Mermaid code..."
               />
-              
+
               <div className="flex items-center space-x-2">
                 <button
                   onClick={handleSaveEdit}
@@ -210,10 +221,9 @@ export function DiagramNode({
               </div>
             </div>
           ) : (
-            <DiagramRenderer 
-              code={node.code} 
-              id={node.id}
-            />
+            <div className="min-h-[200px] w-full overflow-visible bg-white/90 backdrop-blur-sm rounded-b-lg p-4">
+              <DiagramRenderer code={node.code} id={node.id} />
+            </div>
           )}
         </div>
       </div>
