@@ -4,6 +4,7 @@ import { Toolbar } from "./components/Toolbar";
 import { Sidebar } from "./components/Sidebar";
 import { CodeEditor } from "./components/CodeEditor";
 import { ExportModal } from "./components/ExportModal";
+import { DiagramEditDialog } from "./components/DiagramEditDialog";
 import { DiagramNode } from "./types";
 import { v4 as uuidv4 } from "uuid";
 
@@ -12,6 +13,10 @@ function App() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [isCodeEditorOpen, setIsCodeEditorOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingDiagram, setEditingDiagram] = useState<DiagramNode | null>(
+    null
+  );
   const [nodes, setNodes] = useState<DiagramNode[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -89,6 +94,24 @@ function App() {
     setIsExportModalOpen(true);
   };
 
+  const handleDiagramEdit = (diagram: DiagramNode) => {
+    setEditingDiagram(diagram);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleDiagramSave = (updatedDiagram: DiagramNode) => {
+    setNodes((prevNodes) =>
+      prevNodes.map((node) =>
+        node.id === updatedDiagram.id ? updatedDiagram : node
+      )
+    );
+  };
+
+  const handleEditDialogClose = () => {
+    setIsEditDialogOpen(false);
+    setEditingDiagram(null);
+  };
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -129,6 +152,7 @@ function App() {
     onNodeUpdate: handleNodeUpdate,
     onNodeDelete: handleNodeDelete,
     onNodeAdd: handleNodeAdd,
+    onNodeEdit: handleDiagramEdit,
     activeTool,
     currentUserId: "local-user",
   });
@@ -155,6 +179,7 @@ function App() {
         nodes={nodes}
         onNodeSelect={handleNodeSelect}
         onNodeDelete={handleNodeDelete}
+        onNodeEdit={handleDiagramEdit}
         selectedNodeId={selectedNodeId}
         onExport={handleExport}
         onCreateDiagram={handleCreateFromCode}
@@ -172,6 +197,14 @@ function App() {
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
         diagrams={nodes}
+      />
+
+      {/* Diagram Edit Dialog */}
+      <DiagramEditDialog
+        isOpen={isEditDialogOpen}
+        onClose={handleEditDialogClose}
+        diagram={editingDiagram}
+        onSave={handleDiagramSave}
       />
     </div>
   );

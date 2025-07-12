@@ -10,6 +10,7 @@ interface DiagramNodeProps {
   onUpdate: (updates: Partial<DiagramNodeType>) => void;
   onDelete: () => void;
   onDuplicate: () => void;
+  onEdit?: () => void;
   zoom: number;
 }
 
@@ -20,6 +21,7 @@ export function DiagramNode({
   onUpdate,
   onDelete,
   onDuplicate,
+  onEdit,
   zoom,
 }: DiagramNodeProps) {
   const [isDragging, setIsDragging] = useState(false);
@@ -42,7 +44,10 @@ export function DiagramNode({
       return;
 
     onSelect();
-    setIsDragging(true);
+
+    // Track if this is a click or drag
+    let hasMoved = false;
+    const startTime = Date.now();
 
     dragRef.current = {
       startX: e.clientX,
@@ -54,16 +59,34 @@ export function DiagramNode({
     const handleMouseMove = (e: MouseEvent) => {
       if (!dragRef.current) return;
 
-      const deltaX = (e.clientX - dragRef.current.startX) / zoom;
-      const deltaY = (e.clientY - dragRef.current.startY) / zoom;
+      const deltaX = e.clientX - dragRef.current.startX;
+      const deltaY = e.clientY - dragRef.current.startY;
+      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
 
-      onUpdate({
-        x: dragRef.current.nodeX + deltaX,
-        y: dragRef.current.nodeY + deltaY,
-      });
+      // If moved more than 5 pixels, consider it a drag
+      if (distance > 5) {
+        hasMoved = true;
+        setIsDragging(true);
+
+        const scaledDeltaX = deltaX / zoom;
+        const scaledDeltaY = deltaY / zoom;
+
+        onUpdate({
+          x: dragRef.current.nodeX + scaledDeltaX,
+          y: dragRef.current.nodeY + scaledDeltaY,
+        });
+      }
     };
 
     const handleMouseUp = () => {
+      const endTime = Date.now();
+      const clickDuration = endTime - startTime;
+
+      // If it was a quick click without movement, trigger edit
+      if (!hasMoved && clickDuration < 300 && onEdit) {
+        onEdit();
+      }
+
       setIsDragging(false);
       dragRef.current = null;
       document.removeEventListener("mousemove", handleMouseMove);
@@ -122,6 +145,12 @@ export function DiagramNode({
           transformOrigin: "top left",
         }}
         onMouseDown={handleMouseDown}
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          if (onEdit) {
+            onEdit();
+          }
+        }}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-3 bg-white/80 backdrop-blur-sm rounded-t-lg">
@@ -221,7 +250,14 @@ export function DiagramNode({
               </div>
             </div>
           ) : (
-            <div className="min-h-[200px] w-full overflow-visible bg-white/90 backdrop-blur-sm rounded-b-lg p-4">
+            <div
+              className="min-h-[200px] w-full"
+              style={{
+                background: "rgba(255, 255, 255, 0.9)",
+                borderRadius: "0 0 8px 8px",
+                padding: "16px",
+              }}
+            >
               <DiagramRenderer code={node.code} id={node.id} />
             </div>
           )}

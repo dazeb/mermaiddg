@@ -30,39 +30,22 @@ export function DiagramRenderer({ code, id, onError }: DiagramRendererProps) {
 
     const render = async () => {
       try {
-        const { svg } = await mermaid.render(`mermaid-${id}`, code);
+        // Generate a unique ID for each render to avoid conflicts in React StrictMode
+        const uniqueId = `mermaid-${id}-${Date.now()}-${Math.random()
+          .toString(36)
+          .substr(2, 9)}`;
+        const { svg } = await mermaid.render(uniqueId, code);
+
         if (containerRef.current) {
           containerRef.current.innerHTML = svg;
-
-          // Ensure the SVG is properly sized and visible
-          const svgElement = containerRef.current.querySelector("svg");
-          if (svgElement) {
-            svgElement.style.maxWidth = "100%";
-            svgElement.style.height = "auto";
-            svgElement.style.display = "block";
-            svgElement.style.margin = "0 auto";
-
-            // Remove any fixed width/height that might make it too small
-            svgElement.removeAttribute("width");
-            svgElement.removeAttribute("height");
-
-            // Set viewBox if not present to ensure proper scaling
-            if (!svgElement.getAttribute("viewBox")) {
-              const bbox = svgElement.getBBox();
-              svgElement.setAttribute(
-                "viewBox",
-                `0 0 ${bbox.width} ${bbox.height}`
-              );
-            }
-          }
         }
       } catch (error) {
         console.error("Mermaid rendering error:", error);
         onError?.(error instanceof Error ? error.message : "Rendering failed");
         if (containerRef.current) {
           containerRef.current.innerHTML = `
-            <div class="flex items-center justify-center h-32 bg-red-50 border border-red-200 rounded-lg">
-              <p class="text-red-600 text-sm">Diagram rendering failed</p>
+            <div style="display: flex; align-items: center; justify-content: center; height: 200px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px;">
+              <p style="color: #dc2626; font-size: 14px;">Diagram rendering failed</p>
             </div>
           `;
         }
@@ -75,15 +58,12 @@ export function DiagramRenderer({ code, id, onError }: DiagramRendererProps) {
   return (
     <div
       ref={containerRef}
-      className="diagram-container select-none w-full min-h-[200px]"
       style={{
-        fontSize: "14px",
-        overflow: "visible", // Allow content to expand beyond container
+        width: "100%",
+        minHeight: "200px",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        minHeight: "200px",
-        width: "100%",
       }}
     />
   );

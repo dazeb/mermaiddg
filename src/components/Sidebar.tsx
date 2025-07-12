@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   Code,
   Play,
+  Edit3,
 } from "lucide-react";
 import { DiagramNode } from "../types";
 
@@ -16,6 +17,7 @@ interface SidebarProps {
   nodes: DiagramNode[];
   onNodeSelect: (nodeId: string) => void;
   onNodeDelete: (nodeId: string) => void;
+  onNodeEdit?: (node: DiagramNode) => void;
   selectedNodeId: string | null;
   onExport: () => void;
   onCreateDiagram: (code: string, title: string) => void;
@@ -25,6 +27,7 @@ export function Sidebar({
   nodes,
   onNodeSelect,
   onNodeDelete,
+  onNodeEdit,
   selectedNodeId,
   onExport,
   onCreateDiagram,
@@ -166,7 +169,19 @@ export function Sidebar({
                         </p>
                       </div>
 
-                      <div className="flex items-center justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity space-x-1">
+                        {onNodeEdit && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onNodeEdit(node);
+                            }}
+                            className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                            title="Edit diagram"
+                          >
+                            <Edit3 size={14} />
+                          </button>
+                        )}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

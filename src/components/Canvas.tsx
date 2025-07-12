@@ -1,13 +1,14 @@
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import type { DiagramNode as DiagramNodeType, ViewportState } from "../types";
 import { DiagramNode } from "./DiagramNode";
-import { DiagramNode as DiagramNodeType, ViewportState } from "../types";
-import { v4 as uuidv4 } from "uuid";
 
 interface CanvasProps {
   nodes: DiagramNodeType[];
   onNodeUpdate: (id: string, updates: Partial<DiagramNodeType>) => void;
   onNodeDelete: (id: string) => void;
   onNodeAdd: (node: Omit<DiagramNodeType, "id">) => void;
+  onNodeEdit?: (node: DiagramNodeType) => void;
   activeTool: string;
   currentUserId: string;
 }
@@ -17,6 +18,7 @@ export function Canvas({
   onNodeUpdate,
   onNodeDelete,
   onNodeAdd,
+  onNodeEdit,
   activeTool,
   currentUserId,
 }: CanvasProps) {
@@ -82,8 +84,6 @@ export function Canvas({
         // Capture values locally to prevent race condition
         const startViewportX = panRef.current.startViewportX;
         const startViewportY = panRef.current.startViewportY;
-        const startX = panRef.current.startX;
-        const startY = panRef.current.startY;
 
         const deltaX = e.clientX - panRef.current.startX;
         const deltaY = e.clientY - panRef.current.startY;
@@ -131,18 +131,21 @@ export function Canvas({
     [viewport.zoom]
   );
 
-  const handleNodeDuplicate = (node: DiagramNodeType) => {
-    const duplicatedNode: Omit<DiagramNodeType, "id"> = {
-      ...node,
-      x: node.x + 20,
-      y: node.y + 20,
-      title: `${node.title} (Copy)`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      userId: currentUserId,
-    };
-    onNodeAdd(duplicatedNode);
-  };
+  const handleNodeDuplicate = useCallback(
+    (node: DiagramNodeType) => {
+      const duplicatedNode: Omit<DiagramNodeType, "id"> = {
+        ...node,
+        x: node.x + 20,
+        y: node.y + 20,
+        title: `${node.title} (Copy)`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        userId: currentUserId,
+      };
+      onNodeAdd(duplicatedNode);
+    },
+    [onNodeAdd, currentUserId]
+  );
 
   const zoomIn = () => {
     setViewport((prev) => ({ ...prev, zoom: Math.min(prev.zoom * 1.2, 3) }));
@@ -181,7 +184,7 @@ export function Canvas({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [selectedNode, onNodeDelete, nodes]);
+  }, [selectedNode, onNodeDelete, nodes, handleNodeDuplicate]);
 
   return {
     canvas: (
@@ -197,21 +200,11 @@ export function Canvas({
               : "cursor-grab"
           }
         `}
+        role="application"
+        aria-label="Diagram canvas"
         onMouseDown={handleCanvasMouseDown}
         onWheel={handleWheel}
       >
-        {/* Grid pattern */}
-        <div
-          className="absolute inset-0 opacity-30"
-          style={{
-            backgroundImage: `
-              radial-gradient(circle, #ddd 1px, transparent 1px)
-            `,
-            backgroundSize: `${20 * viewport.zoom}px ${20 * viewport.zoom}px`,
-            backgroundPosition: `${viewport.x}px ${viewport.y}px`,
-          }}
-        />
-
         {/* Nodes */}
         <div
           className="absolute"
@@ -228,6 +221,7 @@ export function Canvas({
               onUpdate={(updates) => onNodeUpdate(node.id, updates)}
               onDelete={() => onNodeDelete(node.id)}
               onDuplicate={() => handleNodeDuplicate(node)}
+              onEdit={onNodeEdit ? () => onNodeEdit(node) : undefined}
               zoom={viewport.zoom}
             />
           ))}
