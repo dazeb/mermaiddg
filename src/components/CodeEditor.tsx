@@ -89,7 +89,7 @@ export function CodeEditor({ isOpen, onClose, onCreateDiagram }: CodeEditorProps
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 onKeyDown={handleKeyDown}
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-white text-gray-900"
                 placeholder="Enter your Mermaid code here..."
                 spellCheck={false}
               />
