@@ -80,14 +80,16 @@ export function useSupabase(workspaceId: string) {
         .subscribe();
 
       // Track user presence
-      presenceChannel.track(user);
+      if (currentUser) {
+        presenceChannel.track(currentUser);
+      }
 
       return () => {
         supabase.removeChannel(nodesChannel);
         supabase.removeChannel(presenceChannel);
       };
     }
-  }, [workspaceId]);
+  }, [workspaceId, currentUser, isOfflineMode]);
 
   const initializeUser = async () => {
     if (!isOfflineMode) {
