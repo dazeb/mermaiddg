@@ -3,6 +3,8 @@ import { Canvas } from './components/Canvas';
 import { Toolbar } from './components/Toolbar';
 import { Sidebar } from './components/Sidebar';
 import { CodeEditor } from './components/CodeEditor';
+import { AuthModal } from './components/AuthModal';
+import { UserProfile } from './components/UserProfile';
 import { useSupabase } from './hooks/useSupabase';
 import { DiagramNode } from './types';
 import { v4 as uuidv4 } from 'uuid';
@@ -11,9 +13,23 @@ function App() {
   const [activeTool, setActiveTool] = useState('select');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [isCodeEditorOpen, setIsCodeEditorOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const workspaceId = 'default-workspace'; // In a real app, this would be dynamic
   
-  const { nodes, users, currentUser, addNode, updateNode, deleteNode, isOfflineMode } = useSupabase(workspaceId);
+  const { 
+    nodes, 
+    users, 
+    currentUser, 
+    authState,
+    addNode, 
+    updateNode, 
+    deleteNode, 
+    signUp,
+    signIn,
+    signOut,
+    updateUserName,
+    isOfflineMode 
+  } = useSupabase(workspaceId);
 
   const handleToolChange = (toolId: string) => {
     setActiveTool(toolId);
@@ -42,6 +58,29 @@ function App() {
     
     await addNode(nodeData);
   };
+
+  const handleUpgradeAccount = () => {
+    setIsAuthModalOpen(true);
+  };
+
+  const handleAuthSuccess = () => {
+    setIsAuthModalOpen(false);
+  };
+
+  const handleSignUp = async (email: string, password: string, name: string) => {
+    await signUp(email, password, name);
+    if (!authState.error) {
+      handleAuthSuccess();
+    }
+  };
+
+  const handleSignIn = async (email: string, password: string) => {
+    await signIn(email, password);
+    if (!authState.error) {
+      handleAuthSuccess();
+    }
+  };
+  
   const handleNodeUpdate = async (id: string, updates: Partial<DiagramNode>) => {
     await updateNode(id, { ...updates, updatedAt: new Date().toISOString() });
   };
@@ -122,6 +161,18 @@ function App() {
 
   return (
     <div className="h-screen bg-gray-50 overflow-hidden">
+      {/* User Profile */}
+      <div className="fixed top-6 right-6 z-50">
+        {currentUser && (
+          <UserProfile
+            user={currentUser}
+            onSignOut={signOut}
+            onUpgradeAccount={handleUpgradeAccount}
+            onUpdateName={updateUserName}
+          />
+        )}
+      </div>
+
       {/* Canvas */}
       {canvasData.canvas}
       
@@ -154,12 +205,26 @@ function App() {
         onCreateDiagram={handleCreateFromCode}
       />
       
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onSignUp={handleSignUp}
+        onSignIn={handleSignIn}
+        isLoading={authState.isLoading}
+        error={authState.error}
+        guestName={currentUser?.name || ''}
+      />
+      
       {/* Connection status */}
       <div className="fixed bottom-6 right-6 z-50">
         <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg px-3 py-2 shadow-lg">
           <div className="flex items-center space-x-2">
             <div className={`w-2 h-2 rounded-full ${isOfflineMode ? 'bg-orange-500' : 'bg-green-500 animate-pulse'}`}></div>
-            <span className="text-sm text-gray-600">{isOfflineMode ? 'Offline Mode' : 'Connected'}</span>
+            <span className="text-sm text-gray-600">
+              {isOfflineMode ? 'Offline Mode' : 'Connected'}
+              {currentUser?.isGuest && ' • Guest'}
+            </span>
           </div>
         </div>
       </div>
