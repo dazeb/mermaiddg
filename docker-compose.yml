@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  mermaid-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mermaid-app.rule=Host(`localhost`)"
+      - "traefik.http.services.mermaid-app.loadbalancer.server.port=80"
+
+  # Optional: Development service
+  mermaid-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    profiles:
+      - dev
+    command: pnpm run dev --host 0.0.0.0
