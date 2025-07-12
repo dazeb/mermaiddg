@@ -271,11 +271,13 @@ export function useSupabase(workspaceId: string) {
             setIsOfflineMode(true);
             setNodes(prev => [...prev, newNode]);
           } else {
-            console.error('Error adding node:', error);
+            console.log('Supabase error, switching to offline mode:', error.message);
+            setIsOfflineMode(true);
+            setNodes(prev => [...prev, newNode]);
           }
         }
       } catch (error) {
-        console.error('Supabase request failed:', error);
+        console.log('Supabase request failed, switching to offline mode');
         // If we get a 404 or network error, switch to offline mode
         setIsOfflineMode(true);
         setNodes(prev => [...prev, newNode]);
