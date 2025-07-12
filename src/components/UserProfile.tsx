@@ -26,6 +26,10 @@ export function UserProfile({ user, onSignOut, onUpgradeAccount, onUpdateName }:
     setIsEditingName(false);
   };
 
+  // Memoize the avatar style to prevent flickering
+  const avatarStyle = React.useMemo(() => ({
+    backgroundColor: user.color
+  }), [user.color]);
   return (
     <div className="relative">
       <button
@@ -34,7 +38,7 @@ export function UserProfile({ user, onSignOut, onUpgradeAccount, onUpdateName }:
       >
         <div 
           className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
-          style={{ backgroundColor: user.color }}
+          style={avatarStyle}
         >
           {user.name.charAt(0).toUpperCase()}
         </div>
@@ -57,7 +61,7 @@ export function UserProfile({ user, onSignOut, onUpgradeAccount, onUpdateName }:
               <div className="flex items-center space-x-3">
                 <div 
                   className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium"
-                  style={{ backgroundColor: user.color }}
+                  style={avatarStyle}
                 >
                   {user.name.charAt(0).toUpperCase()}
                 </div>
