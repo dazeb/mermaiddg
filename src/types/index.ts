@@ -14,6 +14,8 @@ export interface DiagramNode {
 export interface User {
   id: string;
   name: string;
+  email?: string;
+  isGuest: boolean;
   color: string;
   cursor?: { x: number; y: number };
   lastSeen: string;

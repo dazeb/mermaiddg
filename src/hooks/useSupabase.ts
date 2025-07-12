@@ -3,11 +3,22 @@ import { supabase } from '../lib/supabase';
 import { DiagramNode, User } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
+interface AuthState {
+  user: User | null;
+  isLoading: boolean;
+  error: string | null;
+}
+
 export function useSupabase(workspaceId: string) {
   const [nodes, setNodes] = useState<DiagramNode[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isOfflineMode, setIsOfflineMode] = useState(false);
+  const [authState, setAuthState] = useState<AuthState>({
+    user: null,
+    isLoading: false,
+    error: null
+  });
 
   useEffect(() => {
     if (!workspaceId) return;
@@ -25,19 +36,8 @@ export function useSupabase(workspaceId: string) {
       setIsOfflineMode(true);
     }
 
-    // Initialize current user
-    const userId = localStorage.getItem('userId') || generateUserId();
-    localStorage.setItem('userId', userId);
-    
-    const user: User = {
-      id: userId,
-      name: `User ${userId.slice(0, 8)}`,
-      color: generateUserColor(),
-      lastSeen: new Date().toISOString(),
-    };
-    
-    setCurrentUser(user);
-    setUsers([user]); // In offline mode, only show current user
+    // Initialize user (check for existing auth or create guest)
+    initializeUser();
 
     // Load nodes from localStorage in offline mode
     if (isOfflineMode) {
@@ -88,6 +88,153 @@ export function useSupabase(workspaceId: string) {
       };
     }
   }, [workspaceId]);
+
+  const initializeUser = async () => {
+    if (!isOfflineMode) {
+      // Check for existing Supabase session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const registeredUser: User = {
+          id: session.user.id,
+          name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'User',
+          email: session.user.email,
+          isGuest: false,
+          color: generateUserColor(),
+          lastSeen: new Date().toISOString(),
+        };
+        setCurrentUser(registeredUser);
+        setUsers([registeredUser]);
+        return;
+      }
+    }
+
+    // Create or load guest user
+    const userId = localStorage.getItem('userId') || generateUserId();
+    const userName = localStorage.getItem('userName') || `Guest ${userId.slice(0, 8)}`;
+    localStorage.setItem('userId', userId);
+    localStorage.setItem('userName', userName);
+    
+    const guestUser: User = {
+      id: userId,
+      name: userName,
+      isGuest: true,
+      color: generateUserColor(),
+      lastSeen: new Date().toISOString(),
+    };
+    
+    setCurrentUser(guestUser);
+    setUsers([guestUser]);
+  };
+
+  const signUp = async (email: string, password: string, name: string) => {
+    setAuthState({ user: null, isLoading: true, error: null });
+    
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name }
+        }
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        // Transfer guest data to new account
+        await transferGuestData(data.user.id);
+        
+        const newUser: User = {
+          id: data.user.id,
+          name,
+          email,
+          isGuest: false,
+          color: currentUser?.color || generateUserColor(),
+          lastSeen: new Date().toISOString(),
+        };
+        
+        setCurrentUser(newUser);
+        setUsers([newUser]);
+        setAuthState({ user: newUser, isLoading: false, error: null });
+      }
+    } catch (error) {
+      setAuthState({ 
+        user: null, 
+        isLoading: false, 
+        error: error instanceof Error ? error.message : 'Sign up failed' 
+      });
+    }
+  };
+
+  const signIn = async (email: string, password: string) => {
+    setAuthState({ user: null, isLoading: true, error: null });
+    
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) throw error;
+
+      if (data.user) {
+        const user: User = {
+          id: data.user.id,
+          name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
+          email: data.user.email,
+          isGuest: false,
+          color: generateUserColor(),
+          lastSeen: new Date().toISOString(),
+        };
+        
+        setCurrentUser(user);
+        setUsers([user]);
+        setAuthState({ user, isLoading: false, error: null });
+      }
+    } catch (error) {
+      setAuthState({ 
+        user: null, 
+        isLoading: false, 
+        error: error instanceof Error ? error.message : 'Sign in failed' 
+      });
+    }
+  };
+
+  const signOut = async () => {
+    if (!isOfflineMode) {
+      await supabase.auth.signOut();
+    }
+    
+    // Clear local storage and reinitialize as guest
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userName');
+    initializeUser();
+  };
+
+  const updateUserName = (name: string) => {
+    if (!currentUser) return;
+    
+    localStorage.setItem('userName', name);
+    const updatedUser = { ...currentUser, name };
+    setCurrentUser(updatedUser);
+    setUsers(prev => prev.map(u => u.id === currentUser.id ? updatedUser : u));
+  };
+
+  const transferGuestData = async (newUserId: string) => {
+    // Update all guest nodes to belong to the new user
+    const updatedNodes = nodes.map(node => ({
+      ...node,
+      userId: newUserId,
+      updatedAt: new Date().toISOString()
+    }));
+    
+    setNodes(updatedNodes);
+    
+    // Save to localStorage for offline mode
+    if (isOfflineMode) {
+      localStorage.setItem(`nodes_${workspaceId}`, JSON.stringify(updatedNodes));
+    }
+  };
 
   // Save nodes to localStorage in offline mode
   useEffect(() => {
@@ -195,9 +342,14 @@ export function useSupabase(workspaceId: string) {
     nodes,
     users,
     currentUser,
+    authState,
     addNode,
     updateNode,
     deleteNode,
+    signUp,
+    signIn,
+    signOut,
+    updateUserName,
     isOfflineMode,
   };
 }
