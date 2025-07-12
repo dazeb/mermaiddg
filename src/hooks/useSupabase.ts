@@ -12,9 +12,16 @@ export function useSupabase(workspaceId: string) {
   useEffect(() => {
     if (!workspaceId) return;
 
-    // Check if we're using placeholder Supabase values
+    // Check if we're using placeholder Supabase values or if Supabase is not properly configured
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    if (!supabaseUrl || supabaseUrl.includes('placeholder')) {
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    
+    if (!supabaseUrl || 
+        !supabaseKey || 
+        supabaseUrl.includes('placeholder') || 
+        supabaseKey.includes('placeholder') ||
+        supabaseUrl === 'your_supabase_url' ||
+        supabaseKey === 'your_supabase_anon_key') {
       setIsOfflineMode(true);
     }
 
@@ -103,10 +110,20 @@ export function useSupabase(workspaceId: string) {
           .from('diagram_nodes')
           .insert([{ ...newNode, workspace_id: workspaceId }]);
         
-        if (error) console.error('Error adding node:', error);
+        if (error) {
+          console.error('Error adding node:', error);
+          // If we get a table not found error, switch to offline mode
+          if (error.message?.includes('relation "public.diagram_nodes" does not exist') || 
+              error.code === 'PGRST116') {
+            console.log('Switching to offline mode due to missing table');
+            setIsOfflineMode(true);
+            setNodes(prev => [...prev, newNode]);
+          }
+        }
       } catch (error) {
-        console.error('Error adding node:', error);
-        // Fallback to local storage if Supabase fails
+        console.error('Supabase request failed:', error);
+        // If we get a 404 or network error, switch to offline mode
+        setIsOfflineMode(true);
         setNodes(prev => [...prev, newNode]);
       }
     }
@@ -125,10 +142,20 @@ export function useSupabase(workspaceId: string) {
           .update(updates)
           .eq('id', id);
         
-        if (error) console.error('Error updating node:', error);
+        if (error) {
+          console.error('Error updating node:', error);
+          // If table doesn't exist, switch to offline mode
+          if (error.message?.includes('relation "public.diagram_nodes" does not exist') || 
+              error.code === 'PGRST116') {
+            setIsOfflineMode(true);
+            setNodes(prev => prev.map(node => 
+              node.id === id ? { ...node, ...updates } : node
+            ));
+          }
+        }
       } catch (error) {
-        console.error('Error updating node:', error);
-        // Fallback to local update if Supabase fails
+        console.error('Supabase request failed:', error);
+        setIsOfflineMode(true);
         setNodes(prev => prev.map(node => 
           node.id === id ? { ...node, ...updates } : node
         ));
@@ -147,10 +174,18 @@ export function useSupabase(workspaceId: string) {
           .delete()
           .eq('id', id);
         
-        if (error) console.error('Error deleting node:', error);
+        if (error) {
+          console.error('Error deleting node:', error);
+          // If table doesn't exist, switch to offline mode
+          if (error.message?.includes('relation "public.diagram_nodes" does not exist') || 
+              error.code === 'PGRST116') {
+            setIsOfflineMode(true);
+            setNodes(prev => prev.filter(node => node.id !== id));
+          }
+        }
       } catch (error) {
-        console.error('Error deleting node:', error);
-        // Fallback to local deletion if Supabase fails
+        console.error('Supabase request failed:', error);
+        setIsOfflineMode(true);
         setNodes(prev => prev.filter(node => node.id !== id));
       }
     }
