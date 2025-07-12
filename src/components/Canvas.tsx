@@ -9,6 +9,7 @@ interface CanvasProps {
   onNodeDelete: (id: string) => void;
   onNodeAdd: (node: Omit<DiagramNodeType, "id">) => void;
   onNodeEdit?: (node: DiagramNodeType) => void;
+  onOpenCodeEditor?: () => void;
   activeTool: string;
   currentUserId: string;
 }
@@ -19,6 +20,7 @@ export function Canvas({
   onNodeDelete,
   onNodeAdd,
   onNodeEdit,
+  onOpenCodeEditor,
   activeTool,
   currentUserId,
 }: CanvasProps) {
@@ -39,30 +41,10 @@ export function Canvas({
 
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
     if (activeTool === "add") {
-      const rect = canvasRef.current?.getBoundingClientRect();
-      if (!rect) return;
-
-      const x = (e.clientX - rect.left - viewport.x) / viewport.zoom;
-      const y = (e.clientY - rect.top - viewport.y) / viewport.zoom;
-
-      const newNode: Omit<DiagramNodeType, "id"> = {
-        x,
-        y,
-        width: 400, // Increased from 300
-        height: 300, // Increased from 200
-        code: `graph TD
-    A[Start] --> B{Decision}
-    B -->|Yes| C[Action 1]
-    B -->|No| D[Action 2]
-    C --> E[End]
-    D --> E`,
-        title: "New Diagram",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        userId: currentUserId,
-      };
-
-      onNodeAdd(newNode);
+      // Open the code editor modal instead of directly creating a diagram
+      if (onOpenCodeEditor) {
+        onOpenCodeEditor();
+      }
       return;
     }
 

@@ -168,6 +168,7 @@ function App() {
     onNodeDelete: handleNodeDelete,
     onNodeAdd: handleNodeAdd,
     onNodeEdit: handleDiagramEdit,
+    onOpenCodeEditor: () => setIsCodeEditorOpen(true),
     activeTool,
     currentUserId: "local-user",
   });
