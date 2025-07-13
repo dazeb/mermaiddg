@@ -7,6 +7,23 @@ export default defineConfig({
 	optimizeDeps: {
 		exclude: ["lucide-react"],
 	},
+	server: {
+		watch: {
+			ignored: [
+				"**/node_modules/**",
+				"**/dist/**",
+				"**/.git/**",
+				"**/Dockerfile*",
+				"**/docker-compose.yml",
+				"**/nginx.conf",
+				"**/build.sh",
+				"**/*.md",
+				"**/LICENSE",
+				"**/pnpm-lock.yaml",
+				"**/package-lock.json",
+			],
+		},
+	},
 	build: {
 		rollupOptions: {
 			output: {
