@@ -39,6 +39,11 @@ const AuthCallback = lazy(() =>
     default: module.AuthCallback,
   }))
 );
+const InteractiveDiagramEditor = lazy(() =>
+  import("./components/InteractiveDiagramEditor").then((module) => ({
+    default: module.InteractiveDiagramEditor,
+  }))
+);
 
 function App() {
   const [activeTool, setActiveTool] = useState("select");
@@ -48,6 +53,7 @@ function App() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isInteractiveEditorOpen, setIsInteractiveEditorOpen] = useState(false);
   const [editingDiagram, setEditingDiagram] = useState<DiagramNode | null>(
     null
   );
@@ -236,8 +242,12 @@ function App() {
         case "c":
           setIsCodeEditorOpen(true);
           break;
+        case "i":
+          setIsInteractiveEditorOpen(true);
+          break;
         case "escape":
           setIsCodeEditorOpen(false);
+          setIsInteractiveEditorOpen(false);
           break;
       }
     };
@@ -279,6 +289,7 @@ function App() {
         onZoomOut={canvasData.zoomOut}
         onExport={handleExport}
         onOpenCodeEditor={() => setIsCodeEditorOpen(true)}
+        onOpenInteractiveEditor={() => setIsInteractiveEditorOpen(true)}
         userCount={users.length}
         zoom={canvasData.zoom}
       />
@@ -316,6 +327,21 @@ function App() {
             onCreateDiagram={handleCreateFromCode}
           />
         </Suspense>
+      )}
+
+      {/* Interactive Diagram Editor */}
+      {isInteractiveEditorOpen && (
+        <div className="fixed inset-0 z-50 bg-white">
+          <Suspense fallback={<div>Loading...</div>}>
+            <InteractiveDiagramEditor
+              onClose={() => setIsInteractiveEditorOpen(false)}
+              onMermaidChange={(mermaidCode) => {
+                // Handle the generated Mermaid code if needed
+                console.log("Generated Mermaid code:", mermaidCode);
+              }}
+            />
+          </Suspense>
+        </div>
       )}
 
       {/* Export Modal */}

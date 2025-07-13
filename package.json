@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.50.5",
+    "@xyflow/react": "^12.8.2",
     "lucide-react": "^0.344.0",
     "mermaid": "^11.8.1",
     "openai": "^5.9.0",

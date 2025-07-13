@@ -1,18 +1,19 @@
-import React from 'react';
-import { 
-  MousePointer2, 
-  Plus, 
-  Move, 
-  Trash2, 
-  Copy, 
-  ZoomIn, 
-  ZoomOut, 
+import React from "react";
+import {
+  MousePointer2,
+  Plus,
+  Move,
+  Trash2,
+  Copy,
+  ZoomIn,
+  ZoomOut,
   Download,
   Users,
   Settings,
-  Code
-} from 'lucide-react';
-import { Tool } from '../types';
+  Code,
+  Workflow,
+} from "lucide-react";
+import { Tool } from "../types";
 
 interface ToolbarProps {
   activeTool: string;
@@ -21,16 +22,17 @@ interface ToolbarProps {
   onZoomOut: () => void;
   onExport: () => void;
   onOpenCodeEditor: () => void;
+  onOpenInteractiveEditor: () => void;
   userCount: number;
   zoom: number;
 }
 
 const tools: Tool[] = [
-  { id: 'select', name: 'Select', icon: 'MousePointer2', shortcut: 'V' },
-  { id: 'add', name: 'Add Diagram', icon: 'Plus', shortcut: 'A' },
-  { id: 'move', name: 'Move', icon: 'Move', shortcut: 'M' },
-  { id: 'copy', name: 'Duplicate', icon: 'Copy', shortcut: 'D' },
-  { id: 'delete', name: 'Delete', icon: 'Trash2', shortcut: 'Del' },
+  { id: "select", name: "Select", icon: "MousePointer2", shortcut: "V" },
+  { id: "add", name: "Add Diagram", icon: "Plus", shortcut: "A" },
+  { id: "move", name: "Move", icon: "Move", shortcut: "M" },
+  { id: "copy", name: "Duplicate", icon: "Copy", shortcut: "D" },
+  { id: "delete", name: "Delete", icon: "Trash2", shortcut: "Del" },
 ];
 
 const iconComponents = {
@@ -41,15 +43,16 @@ const iconComponents = {
   Trash2,
 };
 
-export function Toolbar({ 
-  activeTool, 
-  onToolChange, 
-  onZoomIn, 
-  onZoomOut, 
-  onExport, 
+export function Toolbar({
+  activeTool,
+  onToolChange,
+  onZoomIn,
+  onZoomOut,
+  onExport,
   onOpenCodeEditor,
-  userCount, 
-  zoom 
+  onOpenInteractiveEditor,
+  userCount,
+  zoom,
 }: ToolbarProps) {
   return (
     <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50">
@@ -58,22 +61,24 @@ export function Toolbar({
           {/* Main Tools */}
           <div className="flex items-center space-x-1 pr-3 border-r border-gray-200">
             {tools.map((tool) => {
-              const IconComponent = iconComponents[tool.icon as keyof typeof iconComponents];
+              const IconComponent =
+                iconComponents[tool.icon as keyof typeof iconComponents];
               return (
                 <button
                   key={tool.id}
                   onClick={() => onToolChange(tool.id)}
                   className={`
                     p-2 rounded-lg transition-all duration-200 group relative
-                    ${activeTool === tool.id 
-                      ? 'bg-blue-100 text-blue-600 shadow-sm' 
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    ${
+                      activeTool === tool.id
+                        ? "bg-blue-100 text-blue-600 shadow-sm"
+                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                     }
                   `}
                   title={`${tool.name} (${tool.shortcut})`}
                 >
                   <IconComponent size={18} />
-                  
+
                   {/* Tooltip */}
                   <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
                     {tool.name} ({tool.shortcut})
@@ -83,7 +88,7 @@ export function Toolbar({
             })}
           </div>
 
-          {/* Code Editor */}
+          {/* Editors */}
           <div className="flex items-center space-x-1 pr-3 border-r border-gray-200">
             <button
               onClick={onOpenCodeEditor}
@@ -91,10 +96,23 @@ export function Toolbar({
               title="Code Editor (C)"
             >
               <Code size={18} />
-              
+
               {/* Tooltip */}
               <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
                 Code Editor (C)
+              </div>
+            </button>
+
+            <button
+              onClick={onOpenInteractiveEditor}
+              className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all duration-200 group relative"
+              title="Interactive Editor (I)"
+            >
+              <Workflow size={18} />
+
+              {/* Tooltip */}
+              <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                Interactive Editor (I)
               </div>
             </button>
           </div>
@@ -107,11 +125,11 @@ export function Toolbar({
             >
               <ZoomOut size={18} />
             </button>
-            
+
             <span className="text-sm text-gray-500 min-w-[4rem] text-center">
               {Math.round(zoom * 100)}%
             </span>
-            
+
             <button
               onClick={onZoomIn}
               className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all duration-200"
@@ -130,10 +148,12 @@ export function Toolbar({
             >
               <Download size={18} />
             </button>
-            
+
             <div className="flex items-center space-x-2 px-2 py-1 bg-green-50 rounded-lg">
               <Users size={16} className="text-green-600" />
-              <span className="text-sm text-green-700 font-medium">{userCount}</span>
+              <span className="text-sm text-green-700 font-medium">
+                {userCount}
+              </span>
             </div>
           </div>
         </div>
