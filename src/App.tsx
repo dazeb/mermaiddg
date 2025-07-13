@@ -34,6 +34,11 @@ const Settings = lazy(() =>
     default: module.Settings,
   }))
 );
+const AuthCallback = lazy(() =>
+  import("./components/AuthCallback").then((module) => ({
+    default: module.AuthCallback,
+  }))
+);
 
 function App() {
   const [activeTool, setActiveTool] = useState("select");
@@ -47,6 +52,9 @@ function App() {
     null
   );
 
+  // Check if we're on the auth callback route
+  const isAuthCallback = window.location.pathname === "/auth/callback";
+
   // Use Supabase hook for multi-user functionality
   const workspaceId = "default-workspace"; // For now, use a single workspace
   const {
@@ -59,6 +67,7 @@ function App() {
     deleteNode,
     signUp,
     signIn,
+    signInWithGitHub,
     signOut,
     updateUserName,
     isOfflineMode,
@@ -134,6 +143,11 @@ function App() {
     nodes.forEach((node) => {
       deleteNode(node.id);
     });
+  };
+
+  const handleAuthComplete = () => {
+    // Redirect to homepage
+    window.location.href = "/";
   };
 
   const handleToolChange = (toolId: string) => {
@@ -243,6 +257,15 @@ function App() {
     currentUserId: currentUser?.id || "local-user",
   });
 
+  // Render auth callback if we're on that route
+  if (isAuthCallback) {
+    return (
+      <Suspense fallback={<div>Loading...</div>}>
+        <AuthCallback onAuthComplete={handleAuthComplete} />
+      </Suspense>
+    );
+  }
+
   return (
     <div className="h-screen bg-gray-50 overflow-hidden">
       {/* Canvas */}
@@ -326,6 +349,7 @@ function App() {
             onClose={() => setIsAuthModalOpen(false)}
             onSignUp={signUp}
             onSignIn={signIn}
+            onSignInWithGitHub={signInWithGitHub}
             isLoading={authState.isLoading}
             error={authState.error}
             guestName={currentUser.name}

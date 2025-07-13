@@ -1,11 +1,23 @@
 import React, { useState, useId } from "react";
-import { Code, Plus, X, FileText, Search } from "lucide-react";
+import {
+  Code,
+  Plus,
+  X,
+  FileText,
+  Search,
+  Sparkles,
+  Loader2,
+} from "lucide-react";
 import {
   diagramTemplates,
   templateCategories,
   DiagramTemplate,
 } from "../data/templates";
 import { DiagramRenderer } from "./DiagramRenderer";
+import {
+  generateWorkflowDiagram,
+  WorkflowGenerationRequest,
+} from "../services/openai";
 
 interface CodeEditorProps {
   isOpen: boolean;
@@ -28,6 +40,12 @@ export function CodeEditor({
   const [showTemplates, setShowTemplates] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
+  const [showAIGenerator, setShowAIGenerator] = useState(false);
+  const [aiDescription, setAiDescription] = useState("");
+  const [aiDiagramType, setAiDiagramType] = useState<string>("auto");
+  const [aiComplexity, setAiComplexity] = useState<string>("medium");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const previewId = `preview-${useId().replace(/:/g, "-")}`;
 
   const filteredTemplates = diagramTemplates.filter((template) => {
@@ -43,6 +61,38 @@ export function CodeEditor({
     setCode(template.code);
     setTitle(template.name);
     setShowTemplates(false);
+  };
+
+  const handleAIGenerate = async () => {
+    if (!aiDescription.trim()) {
+      setAiError("Please enter a description for your workflow");
+      return;
+    }
+
+    setIsGenerating(true);
+    setAiError(null);
+
+    try {
+      const request: WorkflowGenerationRequest = {
+        description: aiDescription,
+        diagramType:
+          aiDiagramType === "auto" ? undefined : (aiDiagramType as any),
+        complexity: aiComplexity as any,
+      };
+
+      const result = await generateWorkflowDiagram(request);
+
+      setCode(result.mermaidCode);
+      setTitle(result.title);
+      setShowAIGenerator(false);
+      setAiDescription("");
+    } catch (error) {
+      setAiError(
+        error instanceof Error ? error.message : "Failed to generate diagram"
+      );
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleCreate = () => {
@@ -73,7 +123,11 @@ export function CodeEditor({
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+      <div
+        className={`bg-white rounded-xl shadow-2xl w-full ${
+          showTemplates || showAIGenerator ? "max-w-7xl" : "max-w-4xl"
+        } max-h-[90vh] flex flex-col`}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
@@ -99,6 +153,103 @@ export function CodeEditor({
 
         {/* Content */}
         <div className="flex-1 flex overflow-hidden">
+          {/* AI Generator Panel */}
+          {showAIGenerator && (
+            <div className="w-80 border-r border-gray-200 flex flex-col">
+              <div className="p-4 border-b border-gray-200">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-medium text-gray-900 flex items-center">
+                    <Sparkles className="w-4 h-4 mr-2 text-purple-500" />
+                    AI Generator
+                  </h3>
+                  <button
+                    onClick={() => setShowAIGenerator(false)}
+                    className="p-1 hover:bg-gray-100 rounded"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                {/* Description Input */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Describe your workflow
+                    </label>
+                    <textarea
+                      value={aiDescription}
+                      onChange={(e) => setAiDescription(e.target.value)}
+                      placeholder="Describe the process or workflow you want to visualize. For example: 'A user registration process with email verification and approval workflow'"
+                      className="w-full h-24 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                    />
+                  </div>
+
+                  {/* Diagram Type */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Diagram Type
+                    </label>
+                    <select
+                      value={aiDiagramType}
+                      onChange={(e) => setAiDiagramType(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                      <option value="auto">Auto-detect</option>
+                      <option value="flowchart">Flowchart</option>
+                      <option value="sequence">Sequence</option>
+                      <option value="state">State</option>
+                      <option value="class">Class</option>
+                      <option value="gantt">Gantt</option>
+                      <option value="er">Entity Relationship</option>
+                    </select>
+                  </div>
+
+                  {/* Complexity */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Complexity
+                    </label>
+                    <select
+                      value={aiComplexity}
+                      onChange={(e) => setAiComplexity(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                      <option value="simple">Simple</option>
+                      <option value="medium">Medium</option>
+                      <option value="complex">Complex</option>
+                    </select>
+                  </div>
+
+                  {/* Error Display */}
+                  {aiError && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-sm text-red-600">{aiError}</p>
+                    </div>
+                  )}
+
+                  {/* Generate Button */}
+                  <button
+                    onClick={handleAIGenerate}
+                    disabled={isGenerating || !aiDescription.trim()}
+                    className="w-full flex items-center justify-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Generate Diagram
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Templates Panel */}
           {showTemplates && (
             <div className="w-80 border-r border-gray-200 flex flex-col">
@@ -181,14 +332,24 @@ export function CodeEditor({
                 <label className="block text-sm font-medium text-gray-700">
                   Diagram Title
                 </label>
-                <button
-                  type="button"
-                  onClick={() => setShowTemplates(!showTemplates)}
-                  className="flex items-center space-x-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
-                >
-                  <FileText size={14} />
-                  <span>Templates</span>
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAIGenerator(!showAIGenerator)}
+                    className="flex items-center space-x-1 px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors"
+                  >
+                    <Sparkles size={14} />
+                    <span>AI Generate</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowTemplates(!showTemplates)}
+                    className="flex items-center space-x-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
+                  >
+                    <FileText size={14} />
+                    <span>Templates</span>
+                  </button>
+                </div>
               </div>
               <input
                 type="text"

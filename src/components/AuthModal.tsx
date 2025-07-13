@@ -1,33 +1,44 @@
-import React, { useState } from 'react';
-import { User, Mail, Lock, X, UserPlus, LogIn, AlertCircle } from 'lucide-react';
+import React, { useState } from "react";
+import {
+  User,
+  Mail,
+  Lock,
+  X,
+  UserPlus,
+  LogIn,
+  AlertCircle,
+  Github,
+} from "lucide-react";
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSignUp: (email: string, password: string, name: string) => Promise<void>;
   onSignIn: (email: string, password: string) => Promise<void>;
+  onSignInWithGitHub: () => Promise<void>;
   isLoading: boolean;
   error: string | null;
   guestName: string;
 }
 
-export function AuthModal({ 
-  isOpen, 
-  onClose, 
-  onSignUp, 
-  onSignIn, 
-  isLoading, 
+export function AuthModal({
+  isOpen,
+  onClose,
+  onSignUp,
+  onSignIn,
+  onSignInWithGitHub,
+  isLoading,
   error,
-  guestName 
+  guestName,
 }: AuthModalProps) {
-  const [mode, setMode] = useState<'signin' | 'signup'>('signup');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [mode, setMode] = useState<"signin" | "signup">("signup");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [name, setName] = useState(guestName);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (mode === 'signup') {
+    if (mode === "signup") {
       await onSignUp(email, password, name);
     } else {
       await onSignIn(email, password);
@@ -35,7 +46,7 @@ export function AuthModal({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
+    if (e.key === "Escape") {
       onClose();
     }
   };
@@ -53,13 +64,12 @@ export function AuthModal({
             </div>
             <div>
               <h2 className="text-xl font-semibold text-gray-900">
-                {mode === 'signup' ? 'Create Account' : 'Sign In'}
+                {mode === "signup" ? "Create Account" : "Sign In"}
               </h2>
               <p className="text-sm text-gray-500">
-                {mode === 'signup' 
-                  ? 'Save your work and enable collaboration' 
-                  : 'Access your saved diagrams'
-                }
+                {mode === "signup"
+                  ? "Save your work and enable collaboration"
+                  : "Access your saved diagrams"}
               </p>
             </div>
           </div>
@@ -80,13 +90,16 @@ export function AuthModal({
             </div>
           )}
 
-          {mode === 'signup' && (
+          {mode === "signup" && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Display Name
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                <User
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  size={18}
+                />
                 <input
                   type="text"
                   value={name}
@@ -105,7 +118,10 @@ export function AuthModal({
               Email
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+              <Mail
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                size={18}
+              />
               <input
                 type="email"
                 value={email}
@@ -123,7 +139,10 @@ export function AuthModal({
               Password
             </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+              <Lock
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                size={18}
+              />
               <input
                 type="password"
                 value={password}
@@ -135,7 +154,7 @@ export function AuthModal({
                 minLength={6}
               />
             </div>
-            {mode === 'signup' && (
+            {mode === "signup" && (
               <p className="text-xs text-gray-500 mt-1">Minimum 6 characters</p>
             )}
           </div>
@@ -149,22 +168,48 @@ export function AuthModal({
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
             ) : (
               <>
-                {mode === 'signup' ? <UserPlus size={18} /> : <LogIn size={18} />}
-                <span>{mode === 'signup' ? 'Create Account' : 'Sign In'}</span>
+                {mode === "signup" ? (
+                  <UserPlus size={18} />
+                ) : (
+                  <LogIn size={18} />
+                )}
+                <span>{mode === "signup" ? "Create Account" : "Sign In"}</span>
               </>
             )}
+          </button>
+
+          {/* Divider */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">
+                Or continue with
+              </span>
+            </div>
+          </div>
+
+          {/* GitHub OAuth Button */}
+          <button
+            type="button"
+            onClick={onSignInWithGitHub}
+            disabled={isLoading}
+            className="w-full flex items-center justify-center space-x-2 py-3 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+          >
+            <Github size={18} />
+            <span>Continue with GitHub</span>
           </button>
 
           <div className="text-center">
             <button
               type="button"
-              onClick={() => setMode(mode === 'signup' ? 'signin' : 'signup')}
+              onClick={() => setMode(mode === "signup" ? "signin" : "signup")}
               className="text-sm text-blue-600 hover:text-blue-700 underline"
             >
-              {mode === 'signup' 
-                ? 'Already have an account? Sign in' 
-                : "Don't have an account? Sign up"
-              }
+              {mode === "signup"
+                ? "Already have an account? Sign in"
+                : "Don't have an account? Sign up"}
             </button>
           </div>
         </form>
@@ -173,7 +218,7 @@ export function AuthModal({
         <div className="px-6 pb-6">
           <div className="bg-blue-50 rounded-lg p-4">
             <h4 className="text-sm font-medium text-blue-900 mb-2">
-              {mode === 'signup' ? 'Account Benefits:' : 'Welcome Back!'}
+              {mode === "signup" ? "Account Benefits:" : "Welcome Back!"}
             </h4>
             <ul className="text-xs text-blue-700 space-y-1">
               <li>• Save diagrams across devices</li>

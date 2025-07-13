@@ -39,8 +39,47 @@ export function useSupabase(workspaceId: string) {
 			setIsOfflineMode(true);
 		}
 
+		// Set up auth state change listener
+		const {
+			data: { subscription },
+		} = supabase.auth.onAuthStateChange(async (event, session) => {
+			if (event === "SIGNED_IN" && session?.user) {
+				// Handle successful sign in (including OAuth)
+				const user = session.user;
+				const newUser: User = {
+					id: user.id,
+					name:
+						user.user_metadata?.full_name ||
+						user.user_metadata?.name ||
+						user.email?.split("@")[0] ||
+						"User",
+					email: user.email,
+					isGuest: false,
+					color: currentUser?.color || generateUserColor(),
+					lastSeen: new Date().toISOString(),
+				};
+
+				// Transfer guest data if we had a guest user
+				if (currentUser?.isGuest) {
+					await transferGuestData(user.id);
+				}
+
+				setCurrentUser(newUser);
+				setUsers([newUser]);
+				setAuthState({ user: newUser, isLoading: false, error: null });
+			} else if (event === "SIGNED_OUT") {
+				// Handle sign out
+				initializeUser();
+			}
+		});
+
 		// Initialize user (check for existing auth or create guest)
 		initializeUser();
+
+		// Cleanup subscription
+		return () => {
+			subscription.unsubscribe();
+		};
 	}, [workspaceId]); // Only depend on workspaceId to avoid infinite loops
 
 	// Set up subscriptions and load data (runs when user is initialized or offline mode changes)
@@ -233,6 +272,30 @@ export function useSupabase(workspaceId: string) {
 		}
 	};
 
+	const signInWithGitHub = async () => {
+		setAuthState({ user: null, isLoading: true, error: null });
+
+		try {
+			const { data, error } = await supabase.auth.signInWithOAuth({
+				provider: "github",
+				options: {
+					redirectTo: `${window.location.origin}/auth/callback`,
+				},
+			});
+
+			if (error) throw error;
+
+			// The actual user data will be handled by the auth state change listener
+			// This just initiates the OAuth flow
+		} catch (error) {
+			setAuthState({
+				user: null,
+				isLoading: false,
+				error: error instanceof Error ? error.message : "GitHub sign in failed",
+			});
+		}
+	};
+
 	const signOut = async () => {
 		if (!isOfflineMode) {
 			await supabase.auth.signOut();
@@ -408,6 +471,7 @@ export function useSupabase(workspaceId: string) {
 		deleteNode,
 		signUp,
 		signIn,
+		signInWithGitHub,
 		signOut,
 		updateUserName,
 		isOfflineMode,
