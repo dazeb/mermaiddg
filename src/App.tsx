@@ -1,11 +1,12 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 
-import { Canvas } from "./components/Canvas";
+import { EnhancedCanvas } from "./components/EnhancedCanvas";
 import { Sidebar } from "./components/Sidebar";
 import { Toolbar } from "./components/Toolbar";
 import { UserProfile } from "./components/UserProfile";
 import { useSupabase } from "./hooks/useSupabase";
+import { MermaidThemeProvider } from "./contexts/MermaidThemeContext";
 import type { DiagramNode } from "./types";
 
 // Lazy load components that are only used in modals
@@ -39,11 +40,6 @@ const AuthCallback = lazy(() =>
     default: module.AuthCallback,
   }))
 );
-const InteractiveDiagramEditor = lazy(() =>
-  import("./components/InteractiveDiagramEditor").then((module) => ({
-    default: module.InteractiveDiagramEditor,
-  }))
-);
 
 function App() {
   const [activeTool, setActiveTool] = useState("select");
@@ -53,7 +49,7 @@ function App() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isInteractiveEditorOpen, setIsInteractiveEditorOpen] = useState(false);
+
   const [editingDiagram, setEditingDiagram] = useState<DiagramNode | null>(
     null
   );
@@ -242,12 +238,8 @@ function App() {
         case "c":
           setIsCodeEditorOpen(true);
           break;
-        case "i":
-          setIsInteractiveEditorOpen(true);
-          break;
         case "escape":
           setIsCodeEditorOpen(false);
-          setIsInteractiveEditorOpen(false);
           break;
       }
     };
@@ -256,7 +248,7 @@ function App() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const canvasData = Canvas({
+  const canvasData = EnhancedCanvas({
     nodes,
     onNodeUpdate: handleNodeUpdate,
     onNodeDelete: handleNodeDelete,
@@ -277,130 +269,116 @@ function App() {
   }
 
   return (
-    <div className="h-screen bg-gray-50 overflow-hidden">
-      {/* Canvas */}
-      {canvasData.canvas}
+    <MermaidThemeProvider>
+      <div className="h-screen bg-gray-50 overflow-hidden">
+        {/* Canvas */}
+        {canvasData.canvas}
 
-      {/* Toolbar */}
-      <Toolbar
-        activeTool={activeTool}
-        onToolChange={handleToolChange}
-        onZoomIn={canvasData.zoomIn}
-        onZoomOut={canvasData.zoomOut}
-        onExport={handleExport}
-        onOpenCodeEditor={() => setIsCodeEditorOpen(true)}
-        onOpenInteractiveEditor={() => setIsInteractiveEditorOpen(true)}
-        userCount={users.length}
-        zoom={canvasData.zoom}
-      />
+        {/* Toolbar */}
+        <Toolbar
+          activeTool={activeTool}
+          onToolChange={handleToolChange}
+          onZoomIn={canvasData.zoomIn}
+          onZoomOut={canvasData.zoomOut}
+          onExport={handleExport}
+          onOpenCodeEditor={() => setIsCodeEditorOpen(true)}
+          userCount={users.length}
+          zoom={canvasData.zoom}
+        />
 
-      {/* User Profile */}
-      {currentUser && (
-        <div className="absolute top-4 right-4 z-30">
-          <UserProfile
-            user={currentUser}
-            onSignOut={handleSignOut}
-            onUpgradeAccount={handleUpgradeAccount}
-            onUpdateName={updateUserName}
-            onOpenSettings={handleOpenSettings}
-          />
-        </div>
-      )}
+        {/* User Profile */}
+        {currentUser && (
+          <div className="absolute top-4 right-4 z-30">
+            <UserProfile
+              user={currentUser}
+              onSignOut={handleSignOut}
+              onUpgradeAccount={handleUpgradeAccount}
+              onUpdateName={updateUserName}
+              onOpenSettings={handleOpenSettings}
+            />
+          </div>
+        )}
 
-      {/* Sidebar */}
-      <Sidebar
-        nodes={nodes}
-        onNodeSelect={handleNodeSelect}
-        onNodeDelete={handleNodeDelete}
-        onNodeEdit={handleDiagramEdit}
-        selectedNodeId={selectedNodeId}
-        onExport={handleExport}
-        onCreateDiagram={handleCreateFromCode}
-      />
+        {/* Sidebar */}
+        <Sidebar
+          nodes={nodes}
+          onNodeSelect={handleNodeSelect}
+          onNodeDelete={handleNodeDelete}
+          onNodeEdit={handleDiagramEdit}
+          selectedNodeId={selectedNodeId}
+          onExport={handleExport}
+          onCreateDiagram={handleCreateFromCode}
+        />
 
-      {/* Code Editor */}
-      {isCodeEditorOpen && (
-        <Suspense fallback={<div>Loading...</div>}>
-          <CodeEditor
-            isOpen={isCodeEditorOpen}
-            onClose={() => setIsCodeEditorOpen(false)}
-            onCreateDiagram={handleCreateFromCode}
-          />
-        </Suspense>
-      )}
-
-      {/* Interactive Diagram Editor */}
-      {isInteractiveEditorOpen && (
-        <div className="fixed inset-0 z-50 bg-white">
+        {/* Code Editor */}
+        {isCodeEditorOpen && (
           <Suspense fallback={<div>Loading...</div>}>
-            <InteractiveDiagramEditor
-              onClose={() => setIsInteractiveEditorOpen(false)}
-              onMermaidChange={(mermaidCode) => {
-                // Handle the generated Mermaid code if needed
-                console.log("Generated Mermaid code:", mermaidCode);
-              }}
+            <CodeEditor
+              isOpen={isCodeEditorOpen}
+              onClose={() => setIsCodeEditorOpen(false)}
+              onCreateDiagram={handleCreateFromCode}
             />
           </Suspense>
-        </div>
-      )}
+        )}
 
-      {/* Export Modal */}
-      {isExportModalOpen && (
-        <Suspense fallback={<div>Loading...</div>}>
-          <ExportModal
-            isOpen={isExportModalOpen}
-            onClose={() => setIsExportModalOpen(false)}
-            diagrams={nodes}
-          />
-        </Suspense>
-      )}
+        {/* Export Modal */}
+        {isExportModalOpen && (
+          <Suspense fallback={<div>Loading...</div>}>
+            <ExportModal
+              isOpen={isExportModalOpen}
+              onClose={() => setIsExportModalOpen(false)}
+              diagrams={nodes}
+            />
+          </Suspense>
+        )}
 
-      {/* Diagram Edit Dialog */}
-      {isEditDialogOpen && (
-        <Suspense fallback={<div>Loading...</div>}>
-          <DiagramEditDialog
-            isOpen={isEditDialogOpen}
-            onClose={handleEditDialogClose}
-            diagram={editingDiagram}
-            onSave={handleDiagramSave}
-          />
-        </Suspense>
-      )}
+        {/* Diagram Edit Dialog */}
+        {isEditDialogOpen && (
+          <Suspense fallback={<div>Loading...</div>}>
+            <DiagramEditDialog
+              isOpen={isEditDialogOpen}
+              onClose={handleEditDialogClose}
+              diagram={editingDiagram}
+              onSave={handleDiagramSave}
+            />
+          </Suspense>
+        )}
 
-      {/* Authentication Modal */}
-      {isAuthModalOpen && currentUser && (
-        <Suspense fallback={<div>Loading...</div>}>
-          <AuthModal
-            isOpen={isAuthModalOpen}
-            onClose={() => setIsAuthModalOpen(false)}
-            onSignUp={signUp}
-            onSignIn={signIn}
-            onSignInWithGitHub={signInWithGitHub}
-            isLoading={authState.isLoading}
-            error={authState.error}
-            guestName={currentUser.name}
-          />
-        </Suspense>
-      )}
+        {/* Authentication Modal */}
+        {isAuthModalOpen && currentUser && (
+          <Suspense fallback={<div>Loading...</div>}>
+            <AuthModal
+              isOpen={isAuthModalOpen}
+              onClose={() => setIsAuthModalOpen(false)}
+              onSignUp={signUp}
+              onSignIn={signIn}
+              onSignInWithGitHub={signInWithGitHub}
+              isLoading={authState.isLoading}
+              error={authState.error}
+              guestName={currentUser.name}
+            />
+          </Suspense>
+        )}
 
-      {/* Settings Modal */}
-      {isSettingsOpen && currentUser && (
-        <Suspense fallback={<div>Loading...</div>}>
-          <Settings
-            isOpen={isSettingsOpen}
-            onClose={() => setIsSettingsOpen(false)}
-            user={currentUser}
-            onUpdateUser={handleUpdateUser}
-            onSignOut={handleSignOut}
-            onUpgradeAccount={handleUpgradeAccount}
-            onExportData={handleExportData}
-            onImportData={handleImportData}
-            onClearData={handleClearData}
-            isOfflineMode={isOfflineMode}
-          />
-        </Suspense>
-      )}
-    </div>
+        {/* Settings Modal */}
+        {isSettingsOpen && currentUser && (
+          <Suspense fallback={<div>Loading...</div>}>
+            <Settings
+              isOpen={isSettingsOpen}
+              onClose={() => setIsSettingsOpen(false)}
+              user={currentUser}
+              onUpdateUser={handleUpdateUser}
+              onSignOut={handleSignOut}
+              onUpgradeAccount={handleUpgradeAccount}
+              onExportData={handleExportData}
+              onImportData={handleImportData}
+              onClearData={handleClearData}
+              isOfflineMode={isOfflineMode}
+            />
+          </Suspense>
+        )}
+      </div>
+    </MermaidThemeProvider>
   );
 }
 

@@ -15,16 +15,67 @@ export function DiagramRenderer({ code, id, onError }: DiagramRendererProps) {
 
     mermaid.initialize({
       startOnLoad: false,
-      theme: "default",
+      theme: "base",
       securityLevel: "loose",
       fontFamily: "Inter, system-ui, sans-serif",
+      flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true,
+        curve: "basis",
+      },
+      sequence: {
+        useMaxWidth: true,
+        wrap: true,
+        width: 150,
+      },
+      gantt: {
+        useMaxWidth: true,
+        leftPadding: 75,
+        gridLineStartPadding: 35,
+      },
       themeVariables: {
+        // Primary colors
         primaryColor: "#3B82F6",
         primaryTextColor: "#1F2937",
         primaryBorderColor: "#E5E7EB",
-        lineColor: "#6B7280",
+
+        // Secondary colors
         secondaryColor: "#F3F4F6",
         tertiaryColor: "#FFFFFF",
+
+        // Background colors
+        background: "#FFFFFF",
+        mainBkg: "#FFFFFF",
+        secondBkg: "#F8FAFC",
+
+        // Line and border colors
+        lineColor: "#6B7280",
+        border1: "#E5E7EB",
+        border2: "#D1D5DB",
+
+        // Node colors
+        fillType0: "#EBF8FF",
+        fillType1: "#DBEAFE",
+        fillType2: "#BFDBFE",
+        fillType3: "#93C5FD",
+
+        // Text colors
+        textColor: "#1F2937",
+        labelTextColor: "#374151",
+
+        // Special elements
+        errorBkgColor: "#FEF2F2",
+        errorTextColor: "#DC2626",
+
+        // Git graph colors (for git diagrams)
+        git0: "#3B82F6",
+        git1: "#10B981",
+        git2: "#F59E0B",
+        git3: "#EF4444",
+        git4: "#8B5CF6",
+        git5: "#F97316",
+        git6: "#06B6D4",
+        git7: "#84CC16",
       },
     });
 

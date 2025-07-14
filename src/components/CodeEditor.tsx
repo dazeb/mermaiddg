@@ -14,6 +14,11 @@ import {
   DiagramTemplate,
 } from "../data/templates";
 import { DiagramRenderer } from "./DiagramRenderer";
+import { EnhancedMermaidRenderer } from "./EnhancedMermaidRenderer";
+import {
+  useMermaidTheme,
+  QuickThemeSwitcher,
+} from "../contexts/MermaidThemeContext";
 import {
   generateWorkflowDiagram,
   WorkflowGenerationRequest,
@@ -398,22 +403,18 @@ export function CodeEditor({
 
           {/* Preview */}
           <div className="flex-1 flex flex-col p-6">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">
-              Live Preview
-            </h3>
-            <div className="flex-1 border border-gray-200 rounded-lg p-4 bg-white overflow-auto">
-              {code.trim() ? (
-                <div className="w-full h-full">
-                  <DiagramRenderer code={code} id={previewId} />
-                </div>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-400">
-                  <div className="text-center">
-                    <Code size={48} className="mx-auto mb-3 opacity-50" />
-                    <p className="text-sm">Enter Mermaid code to see preview</p>
-                  </div>
-                </div>
-              )}
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-gray-700">
+                Live Preview
+              </h3>
+              <QuickThemeSwitcher />
+            </div>
+            <div className="flex-1 border border-gray-200 rounded-lg overflow-hidden bg-white">
+              <EnhancedMermaidRenderer
+                code={code}
+                id={previewId}
+                className="w-full h-full p-4"
+              />
             </div>
           </div>
         </div>

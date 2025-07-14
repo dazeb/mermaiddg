@@ -22,7 +22,7 @@ interface ToolbarProps {
   onZoomOut: () => void;
   onExport: () => void;
   onOpenCodeEditor: () => void;
-  onOpenInteractiveEditor: () => void;
+
   userCount: number;
   zoom: number;
 }
@@ -50,7 +50,6 @@ export function Toolbar({
   onZoomOut,
   onExport,
   onOpenCodeEditor,
-  onOpenInteractiveEditor,
   userCount,
   zoom,
 }: ToolbarProps) {
@@ -100,19 +99,6 @@ export function Toolbar({
               {/* Tooltip */}
               <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
                 Code Editor (C)
-              </div>
-            </button>
-
-            <button
-              onClick={onOpenInteractiveEditor}
-              className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-all duration-200 group relative"
-              title="Interactive Editor (I)"
-            >
-              <Workflow size={18} />
-
-              {/* Tooltip */}
-              <div className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                Interactive Editor (I)
               </div>
             </button>
           </div>
